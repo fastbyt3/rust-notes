@@ -178,3 +178,83 @@ fn main() {
 ```rust
 std::mem::drop(foo);
 ```
+
+## Rc<T> -> Refernce counted smart pointer
+
+- `Rc<T>` -> enables multi ownership
+- keeps track of number of references to a value -> determines if the value is still in use
+    - if number of references = 0 -> can be cleaned up
+
+- we use `Rc<T>` when we want to allocate data in heap for multiple parts of the program to read
+    - and we can't determine which part will be using the data at last at compile time
+
+> `Rc<T>` is just for single threaded use
+
+```rust
+use std::rc::Rc;
+use crate::List::{Cons, Nil};
+
+enum List {
+    Cons(i32, Rc<List>),
+    Nil,
+}
+
+fn main() {
+    let list_a = Rc::new(Cons(1, Rc::new(Cons(2, Rc::new(Cons(3, Rc::new(Nil)))))));
+
+    let list_b = Cons(99, Rc::clone(&list_a));
+    let list_c = Cons(69, Rc::clone(&list_a));
+}
+```
+
+- `Rc::clone()`
+    - is an alternative to `.clone()` which deep copies the data, which is not preferred (in case the data is too big meaning takes longer time) 
+    - this method doesnt do a deep copy rather only increments the reference count of the value
+
+```rust
+fn main() {
+    let list_a = Rc::new(Cons(1, Rc::new(Cons(2, Rc::new(Cons(3, Rc::new(Nil)))))));
+
+    println!("Reference count of list_a: {}", Rc::strong_count(&list_a)); // 1
+
+    let list_b = Cons(99, Rc::clone(&list_a));
+    println!("Reference count of list_a: {}", Rc::strong_count(&list_a)); // 2
+
+    {
+        let list_c = Cons(69, Rc::clone(&list_a));
+        println!("Reference count of list_a: {}", Rc::strong_count(&list_a)); // 3
+    }
+
+    println!("Reference count of list_a: {}", Rc::strong_count(&list_a)); // 2
+}
+```
+
+## RefCell<T> and Interior Mutability pattern
+
+- `RefCell<T>` represents single ownership of data it holds
+- The difference between `RefCell<T>` and `Box<T>` is that borrowing rules are enforced at compile time in `Box<T>` rather than at runtime
+- Breaking any of the borrowing rules (either 1 mutable ref or any num of immutable ref at a time & ref must always be valid) at runtime -> panic and exit
+
+- Why check for these rules at runtime
+    - allow certain memory safe code that are disabled by Rustc
+    - eg: Halting problem
+    - Rustc is _conservative_ such that it might reject a correct program if its not sure if the borrowing rules are satisfied
+
+> `RefCell<T>` is also for single threaded applications onyl
+
+### Interior Mutability -> A mutable borrow to immutable value
+
+```rust
+let x = 5;
+let y = &mut x; // Compiler err: cannot borrow x mutably
+```
+
+- `RefCell<T>` is one way to get interior mutability but it doesnt evade borrowing rules completely
+- use case: mocking objects
+
+- example: 
+
+```rust
+
+```
+
